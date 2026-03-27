@@ -1,0 +1,136 @@
+{
+  "name": "composer-visual-manager",
+  "displayName": "Composer Visual Manager",
+  "description": "A visual interface for managing PHP Composer dependencies directly from VS Code",
+  "version": "0.1.0",
+  "publisher": "your-publisher-id",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "php",
+    "composer",
+    "packagist",
+    "dependencies",
+    "package manager"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "icon": "resources/icon.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "composerVisualManager.open",
+        "title": "Open Composer Visual Manager",
+        "icon": {
+          "light": "resources/light/composer.svg",
+          "dark": "resources/dark/composer.svg"
+        }
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "composer-visual-manager",
+          "title": "Composer Visual Manager",
+          "icon": "resources/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "composer-visual-manager": [
+        {
+          "type": "webview",
+          "id": "composerVisualManager.sidebar",
+          "name": "Composer Visual Manager"
+        }
+      ]
+    },
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceFilename == composer.json",
+          "command": "composerVisualManager.open",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Composer Visual Manager",
+      "properties": {
+        "composerVisualManager.columns.type": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show dependency type column (require/require-dev)"
+        },
+        "composerVisualManager.columns.lastUpdate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show last update date column"
+        },
+        "composerVisualManager.columns.security": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show security audit column"
+        },
+        "composerVisualManager.columns.semverUpdate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show semver update type column"
+        },
+        "composerVisualManager.columns.phpVersion": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show required PHP version column"
+        },
+        "composerVisualManager.ignoredPackages": {
+          "type": "array",
+          "default": [],
+          "description": "Packages to ignore for update checks",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Package name (vendor/package)"
+              },
+              "reason": {
+                "type": "string",
+                "description": "Reason for ignoring"
+              },
+              "pinnedVersion": {
+                "type": "string",
+                "description": "Pinned version"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run build:extension && npm run build:webview",
+    "build:extension": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "build:webview": "cd webview-ui && npm run build",
+    "watch": "npm run build:extension -- --watch",
+    "dev": "concurrently \"npm run watch\" \"cd webview-ui && npm run dev\"",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3"
+  }
+}

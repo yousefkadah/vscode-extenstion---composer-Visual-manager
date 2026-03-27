@@ -1,0 +1,15 @@
+.vscode/**
+node_modules/**
+src/**
+webview-ui/node_modules/**
+webview-ui/src/**
+webview-ui/public/**
+webview-ui/index.html
+webview-ui/tsconfig.json
+webview-ui/tsconfig.node.json
+webview-ui/vite.config.ts
+webview-ui/package.json
+webview-ui/package-lock.json
+.gitignore
+tsconfig.json
+**/*.map
