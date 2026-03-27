@@ -12,6 +12,7 @@ interface Props {
   onUpdate: (pkg: ComposerPackage) => void;
   onUninstall: (pkg: ComposerPackage) => void;
   onIgnore: (pkg: ComposerPackage) => void;
+  onWhy?: (pkg: ComposerPackage) => void;
 }
 
 function DependencyTable({
@@ -24,6 +25,7 @@ function DependencyTable({
   onUpdate,
   onUninstall,
   onIgnore,
+  onWhy,
 }: Props) {
   if (loading && packages.length === 0) {
     return (
@@ -172,6 +174,15 @@ function DependencyTable({
                   >
                     {pkg.isIgnored ? "\u{1F441}" : "\u{1F648}"}
                   </button>
+                  {onWhy && (
+                    <button
+                      className="action-btn"
+                      title="Why is this installed?"
+                      onClick={() => onWhy(pkg)}
+                    >
+                      &#x2753;
+                    </button>
+                  )}
                   <button
                     className="action-btn action-changelog"
                     title="View on Packagist"

@@ -1019,6 +1019,281 @@ body {
   cursor: not-allowed;
 }
 
+/* ===== Shared Panel Styles ===== */
+.panel-section {
+  margin-bottom: 12px;
+  border: 1px solid var(--vscode-panel-border, #333);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.panel-body {
+  background: var(--vscode-editor-background);
+}
+
+.panel-content {
+  padding: 6px 14px;
+}
+
+.panel-actions-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+/* ===== Autoload Panel ===== */
+.autoload-group {
+  margin-bottom: 8px;
+}
+
+.autoload-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  opacity: 0.7;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.autoload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.autoload-ns {
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+}
+
+.autoload-arrow {
+  opacity: 0.4;
+  font-size: 12px;
+}
+
+.autoload-path {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.dump-autoload-section {
+  padding: 10px 14px;
+  border-top: 1px solid var(--vscode-panel-border, #333);
+}
+
+.dump-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* ===== Health Panel ===== */
+.health-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--vscode-panel-border, #2a2a2a);
+}
+
+.health-row:last-child {
+  border-bottom: none;
+}
+
+.health-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  padding-top: 1px;
+}
+
+.health-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.health-label {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.health-message {
+  font-size: 11px;
+  opacity: 0.75;
+  line-height: 1.4;
+}
+
+.health-ok { color: #81c784; }
+.health-warn { color: #ffb74d; }
+.health-error { color: #ef5350; }
+
+.health-summary {
+  margin-left: 8px;
+  font-size: 11px;
+}
+
+/* ===== Framework Panel ===== */
+.framework-version {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.6;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.framework-quick-actions {
+  border-bottom: 1px solid var(--vscode-panel-border, #333);
+}
+
+.quick-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px;
+  padding: 8px 14px 12px;
+}
+
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: var(--vscode-sideBar-background, #252526);
+  border: 1px solid var(--vscode-panel-border, #333);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.quick-action-btn:hover {
+  border-color: var(--vscode-focusBorder, #007acc);
+  background: var(--vscode-list-hoverBackground, #2a2d2e);
+}
+
+.quick-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quick-action-icon {
+  font-size: 20px;
+}
+
+.quick-action-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.framework-commands {
+  border-top: 1px solid var(--vscode-panel-border, #333);
+}
+
+.framework-commands-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--vscode-panel-border, #2a2a2a);
+}
+
+.framework-command-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* ===== Licenses Panel ===== */
+.license-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--vscode-panel-border, #333);
+}
+
+.license-summary-item {
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--vscode-sideBar-background, #252526);
+  border: 1px solid var(--vscode-panel-border, #333);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+
+.license-summary-item:hover {
+  border-color: var(--vscode-focusBorder, #007acc);
+}
+
+.license-summary-item.license-restrictive {
+  border-color: #ef5350;
+  background: rgba(211, 47, 47, 0.1);
+}
+
+.license-type {
+  font-weight: 600;
+}
+
+.license-count {
+  opacity: 0.5;
+  font-size: 10px;
+}
+
+.license-badges {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.license-badge {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(0, 122, 204, 0.15);
+  color: #4fc3f7;
+}
+
+.license-badge-warn {
+  background: rgba(211, 47, 47, 0.15);
+  color: #ef5350;
+}
+
+.license-row-warn {
+  background: rgba(211, 47, 47, 0.05);
+}
+
+.license-warn-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  color: #ef5350;
+  font-weight: 600;
+}
+
+/* ===== Stability Controls (in header) ===== */
+.stability-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 8px;
+  border-right: 1px solid var(--vscode-panel-border, #333);
+  margin-right: 4px;
+}
+
+.stability-controls .filter-select {
+  font-size: 11px;
+  padding: 3px 6px;
+}
+
 /* ===== Scrollbar (themed) ===== */
 ::-webkit-scrollbar {
   width: 8px;
