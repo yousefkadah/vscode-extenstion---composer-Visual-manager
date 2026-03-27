@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { ComposerService } from "../services/composerService";
+import { ComposerService, SCRIPT_SUGGESTIONS } from "../services/composerService";
 import { CacheService } from "../services/cacheService";
 import { searchPackages } from "../services/packagistApi";
+
 import { MessageFromWebview, ColumnConfig } from "../types";
 
 export class ComposerPanel {
@@ -143,6 +144,30 @@ export class ComposerPanel {
 
           case "requestConfig":
             this.sendConfig();
+            break;
+
+          case "requestScripts":
+            await this.handleRequestScripts();
+            break;
+
+          case "addScript":
+            await this.handleAddScript(message.name, message.command);
+            break;
+
+          case "removeScript":
+            await this.handleRemoveScript(message.name);
+            break;
+
+          case "editScript":
+            await this.handleEditScript(message.name, message.command);
+            break;
+
+          case "runScript":
+            await this.handleRunScript(message.name);
+            break;
+
+          case "addSuggestion":
+            await this.handleAddSuggestion(message.tool);
             break;
         }
       },
@@ -319,6 +344,87 @@ export class ComposerPanel {
     const filtered = ignored.filter((p) => p.name !== packageName);
     await config.update("ignoredPackages", filtered, vscode.ConfigurationTarget.Workspace);
     await this.refreshPackages(false);
+  }
+
+  // ===== Script Handlers =====
+
+  private async handleRequestScripts() {
+    try {
+      const scripts = await this.composerService.getScripts();
+      this.panel.webview.postMessage({ type: "scripts", data: scripts });
+    } catch {
+      this.panel.webview.postMessage({ type: "scripts", data: [] });
+    }
+  }
+
+  private async handleAddScript(name: string, command: string) {
+    const success = await this.composerService.addScript(name, command);
+    this.panel.webview.postMessage({
+      type: "operationComplete",
+      operation: "addScript",
+      success,
+      message: success
+        ? `Added script "${name}"`
+        : `Failed to add script "${name}"`,
+    });
+    await this.handleRequestScripts();
+  }
+
+  private async handleRemoveScript(name: string) {
+    const success = await this.composerService.removeScript(name);
+    this.panel.webview.postMessage({
+      type: "operationComplete",
+      operation: "removeScript",
+      success,
+      message: success
+        ? `Removed script "${name}"`
+        : `Failed to remove script "${name}"`,
+    });
+    await this.handleRequestScripts();
+  }
+
+  private async handleEditScript(name: string, command: string) {
+    const success = await this.composerService.editScript(name, command);
+    this.panel.webview.postMessage({
+      type: "operationComplete",
+      operation: "editScript",
+      success,
+      message: success
+        ? `Updated script "${name}"`
+        : `Failed to update script "${name}"`,
+    });
+    await this.handleRequestScripts();
+  }
+
+  private async handleRunScript(name: string) {
+    this.panel.webview.postMessage({ type: "loading", loading: true });
+    const { success, output } = await this.composerService.runScript(name);
+    this.panel.webview.postMessage({ type: "scriptOutput", output });
+    this.panel.webview.postMessage({
+      type: "operationComplete",
+      operation: "runScript",
+      success,
+      message: success
+        ? `Script "${name}" completed successfully`
+        : `Script "${name}" failed`,
+    });
+    this.panel.webview.postMessage({ type: "loading", loading: false });
+  }
+
+  private async handleAddSuggestion(tool: string) {
+    this.panel.webview.postMessage({ type: "loading", loading: true });
+    const success = await this.composerService.addSuggestionScripts(tool);
+    const suggestion = SCRIPT_SUGGESTIONS.find((s) => s.tool === tool);
+    this.panel.webview.postMessage({
+      type: "operationComplete",
+      operation: "addSuggestion",
+      success,
+      message: success
+        ? `Added ${suggestion?.tool} scripts and installed ${suggestion?.package}`
+        : `Failed to set up ${tool}`,
+    });
+    await this.handleRequestScripts();
+    await this.refreshPackages(true);
   }
 
   private sendConfig() {

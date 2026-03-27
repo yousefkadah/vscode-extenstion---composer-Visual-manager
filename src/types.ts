@@ -45,6 +45,19 @@ export interface SecurityAdvisory {
   cve?: string;
 }
 
+export interface ComposerScript {
+  name: string;
+  command: string | string[];
+}
+
+export interface ScriptSuggestion {
+  tool: string;
+  description: string;
+  package: string;
+  dev: boolean;
+  scripts: { name: string; command: string }[];
+}
+
 export type MessageToWebview =
   | { type: "packages"; data: ComposerPackage[] }
   | { type: "searchResults"; data: PackagistSearchResult[] }
@@ -54,7 +67,9 @@ export type MessageToWebview =
   | { type: "config"; data: ColumnConfig }
   | { type: "projectInfo"; data: ProjectInfo }
   | { type: "localPathSelected"; path: string }
-  | { type: "githubPackageInfo"; name: string; description: string; branches: string[] };
+  | { type: "githubPackageInfo"; name: string; description: string; branches: string[] }
+  | { type: "scripts"; data: ComposerScript[] }
+  | { type: "scriptOutput"; output: string };
 
 export interface InstallOptions {
   dev: boolean;
@@ -84,7 +99,13 @@ export type MessageFromWebview =
   | { type: "unignore"; packageName: string }
   | { type: "refresh" }
   | { type: "openExternal"; url: string }
-  | { type: "requestConfig" };
+  | { type: "requestConfig" }
+  | { type: "requestScripts" }
+  | { type: "addScript"; name: string; command: string }
+  | { type: "removeScript"; name: string }
+  | { type: "editScript"; name: string; command: string }
+  | { type: "runScript"; name: string }
+  | { type: "addSuggestion"; tool: string };
 
 export interface ColumnConfig {
   type: boolean;

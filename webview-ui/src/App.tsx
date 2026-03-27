@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { ComposerPackage, PackagistSearchResult, ColumnConfig, MessageToWebview } from "./types";
+import { ComposerPackage, ComposerScript, PackagistSearchResult, ColumnConfig, MessageToWebview } from "./types";
 import { postMessage } from "./hooks/useVsCodeApi";
 import DependencyTable from "./components/DependencyTable";
 import SearchPanel from "./components/SearchPanel";
+import ScriptsPanel from "./components/ScriptsPanel";
 import FilterBar from "./components/FilterBar";
 import Modal from "./components/Modal";
 
@@ -11,6 +12,7 @@ type ViewMode = "all" | "outdated";
 
 function App() {
   const [packages, setPackages] = useState<ComposerPackage[]>([]);
+  const [scripts, setScripts] = useState<ComposerScript[]>([]);
   const [searchResults, setSearchResults] = useState<PackagistSearchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<FilterType>("all");
@@ -46,6 +48,7 @@ function App() {
   useEffect(() => {
     postMessage({ type: "requestConfig" });
     postMessage({ type: "requestPackages" });
+    postMessage({ type: "requestScripts" });
 
     const handleMessage = (event: MessageEvent<MessageToWebview>) => {
       const msg = event.data;
@@ -64,6 +67,9 @@ function App() {
           break;
         case "config":
           setColumnConfig(msg.data);
+          break;
+        case "scripts":
+          setScripts(msg.data);
           break;
         case "operationComplete":
           showNotification(msg.message, msg.success ? "success" : "error");
@@ -202,6 +208,8 @@ function App() {
         searchResults={searchResults}
         installedPackages={packages}
       />
+
+      <ScriptsPanel scripts={scripts} />
 
       <FilterBar
         filterType={filterType}

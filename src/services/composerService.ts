@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { ComposerPackage, SecurityAdvisory, InstallOptions } from "../types";
+import { ComposerPackage, SecurityAdvisory, InstallOptions, ComposerScript, ScriptSuggestion } from "../types";
 import { runComposerCommand } from "./commandRunner";
 import { getPackageInfo, getLatestStableVersion } from "./packagistApi";
 import { CacheService } from "./cacheService";
@@ -9,6 +9,7 @@ interface ComposerJson {
   name?: string;
   require?: Record<string, string>;
   "require-dev"?: Record<string, string>;
+  scripts?: Record<string, string | string[]>;
 }
 
 interface ComposerLockPackage {
@@ -373,4 +374,183 @@ export class ComposerService {
   getProjectDir(): string {
     return this.projectDir;
   }
+
+  // ===== Scripts Management =====
+
+  async getScripts(): Promise<ComposerScript[]> {
+    const composerJson = await this.readComposerJson();
+    if (!composerJson?.scripts) {
+      return [];
+    }
+
+    return Object.entries(composerJson.scripts).map(([name, command]) => ({
+      name,
+      command,
+    }));
+  }
+
+  async addScript(name: string, command: string): Promise<boolean> {
+    try {
+      const uri = vscode.Uri.file(this.composerJsonPath);
+      const data = await vscode.workspace.fs.readFile(uri);
+      const json = JSON.parse(Buffer.from(data).toString("utf-8"));
+
+      if (!json.scripts) {
+        json.scripts = {};
+      }
+      json.scripts[name] = command;
+
+      const updated = Buffer.from(JSON.stringify(json, null, 4), "utf-8");
+      await vscode.workspace.fs.writeFile(uri, updated);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async removeScript(name: string): Promise<boolean> {
+    try {
+      const uri = vscode.Uri.file(this.composerJsonPath);
+      const data = await vscode.workspace.fs.readFile(uri);
+      const json = JSON.parse(Buffer.from(data).toString("utf-8"));
+
+      if (json.scripts && json.scripts[name] !== undefined) {
+        delete json.scripts[name];
+      }
+
+      const updated = Buffer.from(JSON.stringify(json, null, 4), "utf-8");
+      await vscode.workspace.fs.writeFile(uri, updated);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async editScript(name: string, command: string): Promise<boolean> {
+    return this.addScript(name, command);
+  }
+
+  async runScript(name: string): Promise<{ success: boolean; output: string }> {
+    const result = await runComposerCommand(`run-script ${name}`, this.projectDir);
+    return {
+      success: result.exitCode === 0,
+      output: result.stdout + (result.stderr ? "\n" + result.stderr : ""),
+    };
+  }
+
+  async addSuggestionScripts(tool: string): Promise<boolean> {
+    const suggestion = SCRIPT_SUGGESTIONS.find((s) => s.tool === tool);
+    if (!suggestion) {
+      return false;
+    }
+
+    // Install the package if not already present
+    const composerJson = await this.readComposerJson();
+    const allDeps = {
+      ...composerJson?.require,
+      ...composerJson?.["require-dev"],
+    };
+
+    if (!allDeps[suggestion.package]) {
+      const installResult = await runComposerCommand(
+        `require ${suggestion.package}${suggestion.dev ? " --dev" : ""}`,
+        this.projectDir
+      );
+      if (installResult.exitCode !== 0) {
+        return false;
+      }
+    }
+
+    // Add all scripts
+    for (const script of suggestion.scripts) {
+      await this.addScript(script.name, script.command);
+    }
+
+    return true;
+  }
 }
+
+export const SCRIPT_SUGGESTIONS: ScriptSuggestion[] = [
+  {
+    tool: "phpstan",
+    description: "PHP Static Analysis Tool - find bugs before they reach production",
+    package: "phpstan/phpstan",
+    dev: true,
+    scripts: [
+      { name: "phpstan", command: "vendor/bin/phpstan analyse" },
+      { name: "phpstan:baseline", command: "vendor/bin/phpstan analyse --generate-baseline" },
+    ],
+  },
+  {
+    tool: "rector",
+    description: "Automated refactoring and instant upgrades for PHP",
+    package: "rector/rector",
+    dev: true,
+    scripts: [
+      { name: "rector", command: "vendor/bin/rector process" },
+      { name: "rector:dry", command: "vendor/bin/rector process --dry-run" },
+    ],
+  },
+  {
+    tool: "pint",
+    description: "Laravel Pint - opinionated PHP code style fixer built on PHP-CS-Fixer",
+    package: "laravel/pint",
+    dev: true,
+    scripts: [
+      { name: "pint", command: "vendor/bin/pint" },
+      { name: "pint:test", command: "vendor/bin/pint --test" },
+    ],
+  },
+  {
+    tool: "pest",
+    description: "Pest - an elegant PHP testing framework with a focus on simplicity",
+    package: "pestphp/pest",
+    dev: true,
+    scripts: [
+      { name: "test", command: "vendor/bin/pest" },
+      { name: "test:coverage", command: "vendor/bin/pest --coverage" },
+      { name: "test:parallel", command: "vendor/bin/pest --parallel" },
+      { name: "test:watch", command: "vendor/bin/pest --watch" },
+    ],
+  },
+  {
+    tool: "phpunit",
+    description: "PHPUnit - the PHP testing framework",
+    package: "phpunit/phpunit",
+    dev: true,
+    scripts: [
+      { name: "test", command: "vendor/bin/phpunit" },
+      { name: "test:coverage", command: "vendor/bin/phpunit --coverage-html coverage" },
+      { name: "test:filter", command: "vendor/bin/phpunit --filter" },
+    ],
+  },
+  {
+    tool: "php-cs-fixer",
+    description: "PHP Coding Standards Fixer - fix your code to follow standards",
+    package: "friendsofphp/php-cs-fixer",
+    dev: true,
+    scripts: [
+      { name: "cs:fix", command: "vendor/bin/php-cs-fixer fix" },
+      { name: "cs:check", command: "vendor/bin/php-cs-fixer fix --dry-run --diff" },
+    ],
+  },
+  {
+    tool: "phpmd",
+    description: "PHP Mess Detector - detect code smells, unused code, and complexity",
+    package: "phpmd/phpmd",
+    dev: true,
+    scripts: [
+      { name: "phpmd", command: "vendor/bin/phpmd src text cleancode,codesize,controversial,design,naming,unusedcode" },
+    ],
+  },
+  {
+    tool: "psalm",
+    description: "Psalm - a static analysis tool for finding errors in PHP",
+    package: "vimeo/psalm",
+    dev: true,
+    scripts: [
+      { name: "psalm", command: "vendor/bin/psalm" },
+      { name: "psalm:fix", command: "vendor/bin/psalm --alter --issues=all" },
+    ],
+  },
+];

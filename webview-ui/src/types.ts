@@ -24,6 +24,19 @@ export interface PackagistSearchResult {
   favers: number;
 }
 
+export interface ComposerScript {
+  name: string;
+  command: string | string[];
+}
+
+export interface ScriptSuggestion {
+  tool: string;
+  description: string;
+  package: string;
+  dev: boolean;
+  scripts: { name: string; command: string }[];
+}
+
 export interface ColumnConfig {
   type: boolean;
   lastUpdate: boolean;
@@ -53,7 +66,9 @@ export type MessageToWebview =
   | { type: "error"; message: string }
   | { type: "config"; data: ColumnConfig }
   | { type: "localPathSelected"; path: string }
-  | { type: "githubPackageInfo"; name: string; description: string; branches: string[] };
+  | { type: "githubPackageInfo"; name: string; description: string; branches: string[] }
+  | { type: "scripts"; data: ComposerScript[] }
+  | { type: "scriptOutput"; output: string };
 
 export type MessageFromWebview =
   | { type: "requestPackages" }
@@ -70,7 +85,13 @@ export type MessageFromWebview =
   | { type: "unignore"; packageName: string }
   | { type: "refresh" }
   | { type: "openExternal"; url: string }
-  | { type: "requestConfig" };
+  | { type: "requestConfig" }
+  | { type: "requestScripts" }
+  | { type: "addScript"; name: string; command: string }
+  | { type: "removeScript"; name: string }
+  | { type: "editScript"; name: string; command: string }
+  | { type: "runScript"; name: string }
+  | { type: "addSuggestion"; tool: string };
 
 declare global {
   function acquireVsCodeApi(): {
