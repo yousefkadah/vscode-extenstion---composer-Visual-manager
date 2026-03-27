@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { ComposerPackage, SecurityAdvisory } from "../types";
+import { ComposerPackage, SecurityAdvisory, InstallOptions } from "../types";
 import { runComposerCommand } from "./commandRunner";
 import { getPackageInfo, getLatestStableVersion } from "./packagistApi";
 import { CacheService } from "./cacheService";
@@ -227,13 +227,118 @@ export class ComposerService {
     return config.get<any[]>("ignoredPackages") || [];
   }
 
-  async installPackage(packageName: string, dev: boolean): Promise<boolean> {
-    const devFlag = dev ? " --dev" : "";
+  private buildOptionFlags(options: InstallOptions): string {
+    const flags: string[] = [];
+    if (options.dev) flags.push("--dev");
+    if (options.preferSource) flags.push("--prefer-source");
+    if (options.preferDist) flags.push("--prefer-dist");
+    if (options.sortPackages) flags.push("--sort-packages");
+    if (options.noUpdate) flags.push("--no-update");
+    if (options.noInstall) flags.push("--no-install");
+    if (options.withDependencies) flags.push("--with-all-dependencies");
+    return flags.join(" ");
+  }
+
+  async installPackage(packageName: string, options: InstallOptions): Promise<boolean> {
+    const versionSuffix = options.version ? `:${options.version}` : "";
+    const flags = this.buildOptionFlags(options);
     const result = await runComposerCommand(
-      `require ${packageName}${devFlag}`,
+      `require ${packageName}${versionSuffix} ${flags}`.trim(),
       this.projectDir
     );
     return result.exitCode === 0;
+  }
+
+  async installFromGithub(
+    url: string,
+    packageName: string | undefined,
+    options: InstallOptions
+  ): Promise<boolean> {
+    // Step 1: Add the VCS repository to composer.json
+    const addRepoResult = await runComposerCommand(
+      `config repositories.${this.repoKeyFromUrl(url)} vcs ${url}`,
+      this.projectDir
+    );
+    if (addRepoResult.exitCode !== 0) {
+      return false;
+    }
+
+    // Step 2: If no package name given, try to detect from the repo's composer.json
+    let name = packageName;
+    if (!name) {
+      name = this.guessPackageNameFromUrl(url);
+    }
+    if (!name) {
+      return false;
+    }
+
+    // Step 3: Require the package
+    const versionSuffix = options.version ? `:${options.version}` : "";
+    const flags = this.buildOptionFlags(options);
+    const result = await runComposerCommand(
+      `require ${name}${versionSuffix} ${flags}`.trim(),
+      this.projectDir
+    );
+    return result.exitCode === 0;
+  }
+
+  async installFromPath(
+    localPath: string,
+    packageName: string | undefined,
+    options: InstallOptions
+  ): Promise<boolean> {
+    // Step 1: Add path repository
+    const key = localPath.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-");
+    const addRepoResult = await runComposerCommand(
+      `config repositories.${key} path ${localPath}`,
+      this.projectDir
+    );
+    if (addRepoResult.exitCode !== 0) {
+      return false;
+    }
+
+    // Step 2: Detect package name from local composer.json if not provided
+    let name = packageName;
+    if (!name) {
+      try {
+        const localComposerPath = path.join(localPath, "composer.json");
+        const uri = vscode.Uri.file(localComposerPath);
+        const data = await vscode.workspace.fs.readFile(uri);
+        const json = JSON.parse(Buffer.from(data).toString("utf-8"));
+        name = json.name;
+      } catch {
+        // Can't read local composer.json
+      }
+    }
+    if (!name) {
+      return false;
+    }
+
+    // Step 3: Require with @dev or specified version
+    const versionSuffix = options.version ? `:${options.version}` : ":@dev";
+    const flags = this.buildOptionFlags(options);
+    const result = await runComposerCommand(
+      `require ${name}${versionSuffix} ${flags}`.trim(),
+      this.projectDir
+    );
+    return result.exitCode === 0;
+  }
+
+  private repoKeyFromUrl(url: string): string {
+    return url
+      .replace(/^https?:\/\//, "")
+      .replace(/\.git$/, "")
+      .replace(/[^a-zA-Z0-9]/g, "-")
+      .replace(/-+/g, "-");
+  }
+
+  private guessPackageNameFromUrl(url: string): string | undefined {
+    // Try to extract vendor/package from GitHub URL
+    const match = url.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
+    if (match) {
+      return `${match[1]}/${match[2]}`.toLowerCase();
+    }
+    return undefined;
   }
 
   async uninstallPackage(packageName: string): Promise<boolean> {

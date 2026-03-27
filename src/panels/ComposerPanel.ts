@@ -98,7 +98,19 @@ export class ComposerPanel {
             break;
 
           case "install":
-            await this.handleInstall(message.packageName, message.dev);
+            await this.handleInstall(message.packageName, message.options);
+            break;
+
+          case "installFromGithub":
+            await this.handleInstallFromGithub(message.url, message.packageName, message.options);
+            break;
+
+          case "installFromPath":
+            await this.handleInstallFromPath(message.path, message.packageName, message.options);
+            break;
+
+          case "browseLocalPath":
+            await this.handleBrowseLocalPath();
             break;
 
           case "uninstall":
@@ -167,9 +179,9 @@ export class ComposerPanel {
     }
   }
 
-  private async handleInstall(packageName: string, dev: boolean) {
+  private async handleInstall(packageName: string, options: import("../types").InstallOptions) {
     this.panel.webview.postMessage({ type: "loading", loading: true });
-    const success = await this.composerService.installPackage(packageName, dev);
+    const success = await this.composerService.installPackage(packageName, options);
     this.panel.webview.postMessage({
       type: "operationComplete",
       operation: "install",
@@ -179,6 +191,60 @@ export class ComposerPanel {
         : `Failed to install ${packageName}`,
     });
     await this.refreshPackages(true);
+  }
+
+  private async handleInstallFromGithub(
+    url: string,
+    packageName: string | undefined,
+    options: import("../types").InstallOptions
+  ) {
+    this.panel.webview.postMessage({ type: "loading", loading: true });
+    const success = await this.composerService.installFromGithub(url, packageName, options);
+    const label = packageName || url;
+    this.panel.webview.postMessage({
+      type: "operationComplete",
+      operation: "install",
+      success,
+      message: success
+        ? `Successfully installed ${label} from GitHub`
+        : `Failed to install from ${url}. Make sure the URL is valid and the repository contains a composer.json.`,
+    });
+    await this.refreshPackages(true);
+  }
+
+  private async handleInstallFromPath(
+    localPath: string,
+    packageName: string | undefined,
+    options: import("../types").InstallOptions
+  ) {
+    this.panel.webview.postMessage({ type: "loading", loading: true });
+    const success = await this.composerService.installFromPath(localPath, packageName, options);
+    const label = packageName || localPath;
+    this.panel.webview.postMessage({
+      type: "operationComplete",
+      operation: "install",
+      success,
+      message: success
+        ? `Successfully installed ${label} from local path`
+        : `Failed to install from ${localPath}. Make sure the path contains a valid composer.json with a "name" field.`,
+    });
+    await this.refreshPackages(true);
+  }
+
+  private async handleBrowseLocalPath() {
+    const result = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: "Select Package Folder",
+      title: "Select a local Composer package directory",
+    });
+    if (result && result[0]) {
+      this.panel.webview.postMessage({
+        type: "localPathSelected",
+        path: result[0].fsPath,
+      });
+    }
   }
 
   private async handleUninstall(packageName: string) {

@@ -32,18 +32,36 @@ export interface ColumnConfig {
   phpVersion: boolean;
 }
 
+export interface InstallOptions {
+  dev: boolean;
+  version?: string;
+  preferSource?: boolean;
+  preferDist?: boolean;
+  sortPackages?: boolean;
+  noUpdate?: boolean;
+  noInstall?: boolean;
+  withDependencies?: boolean;
+}
+
+export type InstallSource = "packagist" | "github" | "local";
+
 export type MessageToWebview =
   | { type: "packages"; data: ComposerPackage[] }
   | { type: "searchResults"; data: PackagistSearchResult[] }
   | { type: "operationComplete"; operation: string; success: boolean; message: string }
   | { type: "loading"; loading: boolean }
   | { type: "error"; message: string }
-  | { type: "config"; data: ColumnConfig };
+  | { type: "config"; data: ColumnConfig }
+  | { type: "localPathSelected"; path: string }
+  | { type: "githubPackageInfo"; name: string; description: string; branches: string[] };
 
 export type MessageFromWebview =
   | { type: "requestPackages" }
   | { type: "search"; query: string }
-  | { type: "install"; packageName: string; dev: boolean }
+  | { type: "install"; packageName: string; options: InstallOptions }
+  | { type: "installFromGithub"; url: string; packageName?: string; options: InstallOptions }
+  | { type: "installFromPath"; path: string; packageName?: string; options: InstallOptions }
+  | { type: "browseLocalPath" }
   | { type: "uninstall"; packageName: string }
   | { type: "update"; packageName: string }
   | { type: "updateAll" }
