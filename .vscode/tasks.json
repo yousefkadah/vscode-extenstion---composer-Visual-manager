@@ -3,17 +3,9 @@
   "tasks": [
     {
       "label": "build",
-      "type": "shell",
-      "command": "npm run build",
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "silent",
-        "panel": "shared"
-      }
+      "type": "npm",
+      "script": "build",
+      "problemMatcher": []
     }
   ]
 }
