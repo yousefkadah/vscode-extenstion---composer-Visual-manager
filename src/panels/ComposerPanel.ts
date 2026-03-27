@@ -234,6 +234,53 @@ export class ComposerPanel {
           case "whyNot":
             await this.handleWhyNot(message.packageName, message.version);
             break;
+
+          // Repositories
+          case "requestRepositories":
+            await this.sendRepositories();
+            break;
+          case "addRepository":
+            await this.handleAddRepository(message.repoType, message.url);
+            break;
+          case "removeRepository":
+            await this.handleRemoveRepository(message.index);
+            break;
+
+          // Suggests
+          case "requestSuggests":
+            await this.sendSuggests();
+            break;
+          case "installSuggested":
+            await this.handleInstall(message.packageName, { dev: false });
+            break;
+
+          // Bump
+          case "bump":
+            await this.handleBump(message.dryRun);
+            break;
+
+          // Laravel Extra
+          case "requestLaravelExtra":
+            await this.sendLaravelExtra();
+            break;
+          case "addDontDiscover":
+            await this.handleLaravelExtraModify("addDontDiscover", message.packageName);
+            break;
+          case "removeDontDiscover":
+            await this.handleLaravelExtraModify("removeDontDiscover", message.packageName);
+            break;
+          case "addLaravelProvider":
+            await this.handleLaravelExtraModify("addProvider", message.provider);
+            break;
+          case "removeLaravelProvider":
+            await this.handleLaravelExtraModify("removeProvider", message.provider);
+            break;
+          case "addLaravelAlias":
+            await this.handleLaravelAlias("add", message.alias, message.className);
+            break;
+          case "removeLaravelAlias":
+            await this.handleLaravelAlias("remove", message.alias);
+            break;
         }
       },
       null,
@@ -603,6 +650,72 @@ export class ComposerPanel {
   private async handleWhyNot(packageName: string, version: string) {
     const data = await this.composerService.whyNot(packageName, version);
     this.panel.webview.postMessage({ type: "whyResult", data });
+  }
+
+  // ===== Repositories Handlers =====
+
+  private async sendRepositories() {
+    const data = await this.composerService.getRepositories();
+    this.panel.webview.postMessage({ type: "repositories", data });
+  }
+
+  private async handleAddRepository(repoType: string, url: string) {
+    const success = await this.composerService.addRepository(repoType, url);
+    this.panel.webview.postMessage({ type: "operationComplete", operation: "addRepo", success, message: success ? `Added ${repoType} repository` : "Failed to add repository" });
+    await this.sendRepositories();
+  }
+
+  private async handleRemoveRepository(index: number) {
+    const success = await this.composerService.removeRepository(index);
+    this.panel.webview.postMessage({ type: "operationComplete", operation: "removeRepo", success, message: success ? "Repository removed" : "Failed to remove repository" });
+    await this.sendRepositories();
+  }
+
+  // ===== Suggests Handler =====
+
+  private async sendSuggests() {
+    this.panel.webview.postMessage({ type: "loading", loading: true });
+    const data = await this.composerService.getSuggests();
+    this.panel.webview.postMessage({ type: "suggests", data });
+    this.panel.webview.postMessage({ type: "loading", loading: false });
+  }
+
+  // ===== Bump Handler =====
+
+  private async handleBump(dryRun: boolean) {
+    this.panel.webview.postMessage({ type: "loading", loading: true });
+    const { success, output } = await this.composerService.bump(dryRun);
+    this.panel.webview.postMessage({ type: "commandOutput", title: dryRun ? "Bump (Dry Run)" : "Bump", output });
+    this.panel.webview.postMessage({ type: "operationComplete", operation: "bump", success, message: success ? (dryRun ? "Dry run complete" : "Version constraints bumped") : "Bump failed" });
+    this.panel.webview.postMessage({ type: "loading", loading: false });
+    if (!dryRun) await this.refreshPackages(true);
+  }
+
+  // ===== Laravel Extra Handlers =====
+
+  private async sendLaravelExtra() {
+    const data = await this.composerService.getLaravelExtra();
+    this.panel.webview.postMessage({ type: "laravelExtra", data });
+  }
+
+  private async handleLaravelExtraModify(action: string, value: string) {
+    const extra = await this.composerService.getLaravelExtra();
+    if (action === "addDontDiscover" && !extra.dontDiscover.includes(value)) extra.dontDiscover.push(value);
+    if (action === "removeDontDiscover") extra.dontDiscover = extra.dontDiscover.filter((v) => v !== value);
+    if (action === "addProvider" && !extra.providers.includes(value)) extra.providers.push(value);
+    if (action === "removeProvider") extra.providers = extra.providers.filter((v) => v !== value);
+    const success = await this.composerService.setLaravelExtra(extra);
+    this.panel.webview.postMessage({ type: "operationComplete", operation: "laravelExtra", success, message: success ? "Updated" : "Failed" });
+    await this.sendLaravelExtra();
+  }
+
+  private async handleLaravelAlias(action: string, alias: string, className?: string) {
+    const extra = await this.composerService.getLaravelExtra();
+    if (action === "add" && className) extra.aliases[alias] = className;
+    if (action === "remove") delete extra.aliases[alias];
+    const success = await this.composerService.setLaravelExtra(extra);
+    this.panel.webview.postMessage({ type: "operationComplete", operation: "laravelExtra", success, message: success ? "Updated" : "Failed" });
+    await this.sendLaravelExtra();
   }
 
   private sendConfig() {

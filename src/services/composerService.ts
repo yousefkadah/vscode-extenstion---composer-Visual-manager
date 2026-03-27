@@ -4,6 +4,7 @@ import {
   ComposerPackage, SecurityAdvisory, InstallOptions, ComposerScript, ScriptSuggestion,
   AutoloadData, AutoloadConfig, PlatformRequirement, HealthCheck,
   FrameworkInfo, FrameworkType, LicenseEntry, StabilityConfig, WhyResult,
+  ComposerRepository, SuggestEntry, LaravelExtra,
 } from "../types";
 import { runComposerCommand } from "./commandRunner";
 import { getPackageInfo, getLatestStableVersion } from "./packagistApi";
@@ -781,6 +782,126 @@ export class ComposerService {
       packageName,
       reason: line.trim(),
     }));
+  }
+
+  // ===== Repositories Management =====
+
+  async getRepositories(): Promise<ComposerRepository[]> {
+    const json = await this.readComposerJson();
+    const repos = (json as any)?.repositories;
+    if (!repos) return [];
+
+    if (Array.isArray(repos)) {
+      return repos.map((r: any, i: number) => ({
+        type: r.type || "unknown",
+        url: r.url,
+        path: r.path || r.url,
+        options: r.options,
+        raw: r,
+        index: i,
+      }));
+    }
+    // Object format
+    return Object.entries(repos).map(([key, r]: [string, any], i) => ({
+      type: typeof r === "object" ? (r.type || "unknown") : "disabled",
+      url: typeof r === "object" ? r.url : undefined,
+      path: typeof r === "object" ? (r.path || r.url) : key,
+      raw: r,
+      index: i,
+    }));
+  }
+
+  async addRepository(repoType: string, url: string): Promise<boolean> {
+    try {
+      const uri = vscode.Uri.file(this.composerJsonPath);
+      const data = await vscode.workspace.fs.readFile(uri);
+      const json = JSON.parse(Buffer.from(data).toString("utf-8"));
+      if (!json.repositories) json.repositories = [];
+      const entry: any = { type: repoType };
+      if (repoType === "path") entry.url = url;
+      else entry.url = url;
+      json.repositories.push(entry);
+      await vscode.workspace.fs.writeFile(uri, Buffer.from(JSON.stringify(json, null, 4), "utf-8"));
+      return true;
+    } catch { return false; }
+  }
+
+  async removeRepository(index: number): Promise<boolean> {
+    try {
+      const uri = vscode.Uri.file(this.composerJsonPath);
+      const data = await vscode.workspace.fs.readFile(uri);
+      const json = JSON.parse(Buffer.from(data).toString("utf-8"));
+      if (Array.isArray(json.repositories) && json.repositories[index] !== undefined) {
+        json.repositories.splice(index, 1);
+      }
+      await vscode.workspace.fs.writeFile(uri, Buffer.from(JSON.stringify(json, null, 4), "utf-8"));
+      return true;
+    } catch { return false; }
+  }
+
+  // ===== Suggests =====
+
+  async getSuggests(): Promise<SuggestEntry[]> {
+    const result = await runComposerCommand("suggests --all", this.projectDir, false);
+    const json = await this.readComposerJson();
+    const allDeps = { ...json?.require, ...json?.["require-dev"] };
+    const installed = new Set(Object.keys(allDeps));
+
+    const entries: SuggestEntry[] = [];
+    const lines = result.stdout.split("\n").filter(Boolean);
+    for (const line of lines) {
+      // Format: "package - reason" or "- vendor/package: reason"
+      const match = line.match(/[-\s]*([a-z0-9][\w.-]*\/[\w.-]+)[:\s]+(.+)/i);
+      if (match) {
+        entries.push({
+          name: match[1],
+          reason: match[2].trim(),
+          installed: installed.has(match[1]),
+        });
+      }
+    }
+    return entries;
+  }
+
+  // ===== Bump =====
+
+  async bump(dryRun: boolean): Promise<{ success: boolean; output: string }> {
+    const flag = dryRun ? "--dry-run" : "";
+    const result = await runComposerCommand(`bump ${flag}`.trim(), this.projectDir);
+    return { success: result.exitCode === 0, output: result.stdout + result.stderr };
+  }
+
+  // ===== Laravel Extra =====
+
+  async getLaravelExtra(): Promise<LaravelExtra> {
+    const json = await this.readComposerJson();
+    const extra = (json as any)?.extra?.laravel || {};
+    return {
+      dontDiscover: extra["dont-discover"] || [],
+      providers: extra.providers || [],
+      aliases: extra.aliases || {},
+    };
+  }
+
+  async setLaravelExtra(laravelExtra: LaravelExtra): Promise<boolean> {
+    try {
+      const uri = vscode.Uri.file(this.composerJsonPath);
+      const data = await vscode.workspace.fs.readFile(uri);
+      const json = JSON.parse(Buffer.from(data).toString("utf-8"));
+      if (!json.extra) json.extra = {};
+      if (!json.extra.laravel) json.extra.laravel = {};
+      json.extra.laravel["dont-discover"] = laravelExtra.dontDiscover;
+      json.extra.laravel.providers = laravelExtra.providers;
+      json.extra.laravel.aliases = laravelExtra.aliases;
+      // Clean empty arrays
+      if (json.extra.laravel["dont-discover"].length === 0) delete json.extra.laravel["dont-discover"];
+      if (json.extra.laravel.providers.length === 0) delete json.extra.laravel.providers;
+      if (Object.keys(json.extra.laravel.aliases).length === 0) delete json.extra.laravel.aliases;
+      if (Object.keys(json.extra.laravel).length === 0) delete json.extra.laravel;
+      if (Object.keys(json.extra).length === 0) delete json.extra;
+      await vscode.workspace.fs.writeFile(uri, Buffer.from(JSON.stringify(json, null, 4), "utf-8"));
+      return true;
+    } catch { return false; }
   }
 }
 

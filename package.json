@@ -3,7 +3,11 @@
   "displayName": "Composer Visual Manager",
   "description": "A visual interface for managing PHP Composer dependencies directly from VS Code",
   "version": "0.1.0",
-  "publisher": "your-publisher-id",
+  "publisher": "yousefkadah",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yousefkadah/composer-Visual-manager"
+  },
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"

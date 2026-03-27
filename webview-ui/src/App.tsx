@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import {
   ComposerPackage, ComposerScript, PackagistSearchResult, ColumnConfig,
   AutoloadData, PlatformRequirement, HealthCheck, FrameworkInfo,
-  LicenseEntry, StabilityConfig, WhyResult, MessageToWebview,
+  LicenseEntry, StabilityConfig, WhyResult, ComposerRepository,
+  SuggestEntry, LaravelExtra, MessageToWebview,
 } from "./types";
 import { postMessage } from "./hooks/useVsCodeApi";
 import DependencyTable from "./components/DependencyTable";
@@ -13,6 +14,9 @@ import PlatformPanel from "./components/PlatformPanel";
 import HealthPanel from "./components/HealthPanel";
 import FrameworkPanel from "./components/FrameworkPanel";
 import LicensesPanel from "./components/LicensesPanel";
+import RepositoriesPanel from "./components/RepositoriesPanel";
+import SuggestsPanel from "./components/SuggestsPanel";
+import LaravelExtraPanel from "./components/LaravelExtraPanel";
 import FilterBar from "./components/FilterBar";
 import Modal from "./components/Modal";
 
@@ -42,6 +46,9 @@ function App() {
   const [stability, setStability] = useState<StabilityConfig | null>(null);
   const [whyResults, setWhyResults] = useState<WhyResult[]>([]);
   const [whyModal, setWhyModal] = useState(false);
+  const [repositories, setRepositories] = useState<ComposerRepository[]>([]);
+  const [suggests, setSuggests] = useState<SuggestEntry[]>([]);
+  const [laravelExtra, setLaravelExtra] = useState<LaravelExtra | null>(null);
 
   // Modal state
   const [modal, setModal] = useState<{
@@ -86,6 +93,9 @@ function App() {
           setWhyResults(msg.data);
           setWhyModal(true);
           break;
+        case "repositories": setRepositories(msg.data); break;
+        case "suggests": setSuggests(msg.data); break;
+        case "laravelExtra": setLaravelExtra(msg.data); break;
         case "operationComplete":
           showNotification(msg.message, msg.success ? "success" : "error");
           break;
@@ -198,6 +208,20 @@ function App() {
       <PlatformPanel requirements={platformReqs} />
       <HealthPanel checks={healthChecks} />
       <LicensesPanel licenses={licenses} />
+      <RepositoriesPanel repositories={repositories} />
+      <SuggestsPanel suggests={suggests} />
+      <LaravelExtraPanel laravelExtra={laravelExtra} frameworkInfo={frameworkInfo} />
+
+      {/* Bump button */}
+      <div className="bump-section">
+        <button className="btn btn-secondary btn-sm" onClick={() => postMessage({ type: "bump", dryRun: true })} title="Preview constraint bumps">
+          Bump (Dry Run)
+        </button>
+        <button className="btn btn-primary btn-sm" onClick={() => postMessage({ type: "bump", dryRun: false })} title="Raise lower bounds to installed versions">
+          Bump Constraints
+        </button>
+        <span className="form-hint" style={{ marginLeft: 4 }}>Raise version lower bounds to installed versions</span>
+      </div>
 
       <FilterBar
         filterType={filterType} onFilterTypeChange={setFilterType}

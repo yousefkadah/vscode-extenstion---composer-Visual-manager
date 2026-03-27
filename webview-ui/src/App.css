@@ -1294,6 +1294,18 @@ body {
   padding: 3px 6px;
 }
 
+/* ===== Bump Section ===== */
+.bump-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--vscode-panel-border, #333);
+  border-radius: 4px;
+  background: var(--vscode-sideBar-background, #252526);
+}
+
 /* ===== Scrollbar (themed) ===== */
 ::-webkit-scrollbar {
   width: 8px;

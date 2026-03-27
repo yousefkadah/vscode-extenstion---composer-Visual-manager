@@ -116,6 +116,30 @@ export interface FrameworkQuickAction {
   icon: string;
 }
 
+// Repositories
+export interface ComposerRepository {
+  type: string;
+  url?: string;
+  path?: string;
+  options?: Record<string, any>;
+  raw: any;
+  index: number;
+}
+
+// Suggests
+export interface SuggestEntry {
+  name: string;
+  reason: string;
+  installed: boolean;
+}
+
+// Laravel Extra
+export interface LaravelExtra {
+  dontDiscover: string[];
+  providers: string[];
+  aliases: Record<string, string>;
+}
+
 // Licenses
 export interface LicenseEntry {
   name: string;
@@ -153,7 +177,10 @@ export type MessageToWebview =
   | { type: "licenses"; data: LicenseEntry[] }
   | { type: "stabilityConfig"; data: StabilityConfig }
   | { type: "whyResult"; data: WhyResult[] }
-  | { type: "commandOutput"; title: string; output: string };
+  | { type: "commandOutput"; title: string; output: string }
+  | { type: "repositories"; data: ComposerRepository[] }
+  | { type: "suggests"; data: SuggestEntry[] }
+  | { type: "laravelExtra"; data: LaravelExtra };
 
 export type MessageFromWebview =
   | { type: "requestPackages" }
@@ -200,7 +227,24 @@ export type MessageFromWebview =
   | { type: "setStability"; minimumStability: string; preferStable: boolean }
   // Why
   | { type: "why"; packageName: string }
-  | { type: "whyNot"; packageName: string; version: string };
+  | { type: "whyNot"; packageName: string; version: string }
+  // Repositories
+  | { type: "requestRepositories" }
+  | { type: "addRepository"; repoType: string; url: string }
+  | { type: "removeRepository"; index: number }
+  // Suggests
+  | { type: "requestSuggests" }
+  | { type: "installSuggested"; packageName: string }
+  // Bump
+  | { type: "bump"; dryRun: boolean }
+  // Laravel Extra
+  | { type: "requestLaravelExtra" }
+  | { type: "addDontDiscover"; packageName: string }
+  | { type: "removeDontDiscover"; packageName: string }
+  | { type: "addLaravelProvider"; provider: string }
+  | { type: "removeLaravelProvider"; provider: string }
+  | { type: "addLaravelAlias"; alias: string; className: string }
+  | { type: "removeLaravelAlias"; alias: string };
 
 declare global {
   function acquireVsCodeApi(): {
